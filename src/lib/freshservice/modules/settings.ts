@@ -1,0 +1,65 @@
+import { makeAdapter, type ModuleAdapter } from './types';
+
+// Dados de contato não participam do inventário estrutural; IDs, nome e hierarquia ficam.
+const CONTACT_FIELDS = ['address', 'address_line1', 'address_line2', 'street', 'city', 'state', 'country', 'zipcode', 'zip_code', 'postal_code', 'contact', 'contacts', 'contact_name', 'contact_person'];
+
+export const settingsAdapters: ModuleAdapter[] = [
+  makeAdapter({
+    key: 'settings.workspaces',
+    listKey: 'workspaces',
+    moduleGroup: 'settings',
+    name: 'Workspaces',
+    path: '/api/v2/workspaces',
+    paginated: true,
+    docNote: 'Ação "List All Workspaces / Clients" no índice.',
+    fields: ['id', 'name', 'description', 'primary', 'active', 'created_at', 'updated_at'],
+    contentFields: ['description'],
+  }),
+  makeAdapter({
+    key: 'settings.sla_policies',
+    listKey: 'sla_policies',
+    moduleGroup: 'settings',
+    name: 'Políticas de SLA',
+    path: '/api/v2/sla_policies',
+    paginated: true,
+    docNote: 'Ação "View List of SLAs" no índice. Caminho confirmado na documentação.',
+    fields: ['id', 'name', 'description', 'position', 'is_default', 'active', 'workspace_id'],
+    contentFields: ['description'],
+  }),
+  makeAdapter({
+    key: 'settings.locations',
+    listKey: 'locations',
+    moduleGroup: 'settings',
+    name: 'Locais',
+    path: '/api/v2/locations',
+    paginated: true,
+    docNote: 'Ação "List all Locations" no índice. Endereço não entra no normalized.',
+    fields: ['id', 'name', 'parent_location_id', 'workspace_id', 'created_at', 'updated_at'],
+    excludeFields: CONTACT_FIELDS,
+    relationFields: { parent_location_id: 'location' },
+  }),
+  makeAdapter({
+    key: 'settings.products',
+    listKey: 'products',
+    moduleGroup: 'settings',
+    name: 'Produtos',
+    path: '/api/v2/products',
+    paginated: true,
+    docNote: 'Ação "List all Products" no índice.',
+    fields: ['id', 'name', 'description', 'asset_type_id', 'manufacturer', 'status'],
+    contentFields: ['description'],
+    relationFields: { asset_type_id: 'asset_type' },
+  }),
+  makeAdapter({
+    key: 'settings.vendors',
+    listKey: 'vendors',
+    moduleGroup: 'settings',
+    name: 'Fornecedores',
+    path: '/api/v2/vendors',
+    paginated: true,
+    docNote: 'Ação "List all Vendors" no índice. Contatos não entram no normalized.',
+    fields: ['id', 'name', 'description'],
+    excludeFields: CONTACT_FIELDS,
+    contentFields: ['description'],
+  }),
+];

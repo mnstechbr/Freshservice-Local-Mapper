@@ -1,0 +1,96 @@
+# Dependências
+node_modules/
+
+# Lockfile canônico: pnpm-lock.yaml. Lockfiles de outros gerenciadores nunca são versionados.
+package-lock.json
+yarn.lock
+npm-shrinkwrap.json
+bun.lockb
+bun.lock
+
+# Next.js / build
+.next/
+out/
+*.tsbuildinfo
+coverage/
+
+# Dados locais (SQLite, backups, exportações). Nunca versionar.
+# O diretório padrão de dados fica fora do projeto; estas regras cobrem cópias acidentais.
+/data/
+/backups/
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.bak
+bootstrap-status.json
+dev-server.lock
+
+# Logs
+/logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Variáveis de ambiente (segredos). Só o modelo é versionado.
+.env*
+!.env.example
+
+# Credenciais, tokens e chaves
+/secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+*.dpapi
+vault.enc.json
+*credentials*.json
+*token*.json
+
+# Exportações e dados de clientes
+/exports/
+*.csv
+*.xlsx
+
+# Configuração local do Claude Code
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*~
+
+# Temporários
+/tmp/
+.tmp/
+*.tmp
+
+# Testes E2E, validação e relatórios do Playwright (dados de teste descartáveis, nunca versionar).
+.e2e-data/
+.qa-*/
+test-results/
+playwright-report/
+blob-report/
+
+# Arquivos internos preservados no computador, excluídos da distribuição pública.
+.claude/
+Prompt_*.txt
+Painel_Freshservice_Design*.png
+docs/PROGRESSO.md
+docs/AUDITORIA-OPUS.md
+docs/SKILLS-MAP.md
+.ci-data/
+
+# Rascunhos manuais históricos de QA; regressões atuais ficam em ui-e2e e scripts/verify-offline.mjs.
+tests/validacao-final/

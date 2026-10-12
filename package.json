@@ -1,0 +1,65 @@
+{
+  "name": "freshservice-local-mapper",
+  "version": "0.1.0-beta",
+  "private": true,
+  "description": "Mapeamento local de inst\u00e2ncias Freshservice",
+  "packageManager": "pnpm@10.34.0+sha512.8736169c56fdb6e26afb5d7e2bd5f4c99cc299620d8bdc288cb354e6dd0936bd4ea62276d1a6b2de4b6e971a00a530e0e08bbeeda63da5d820118d3d7e21ff69",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "node scripts/start-dev.mjs",
+    "bootstrap": "node scripts/start-dev.mjs --prepare-only",
+    "preinstall": "node scripts/check-package-manager.mjs",
+    "build": "cross-env NEXT_TELEMETRY_DISABLED=1 next build",
+    "start": "cross-env NEXT_TELEMETRY_DISABLED=1 next start -H 127.0.0.1",
+    "test": "vitest run",
+    "test:e2e": "cross-env E2E_MODE=prod playwright test",
+    "test:e2e:dev": "cross-env E2E_MODE=dev playwright test",
+    "test:e2e:sim": "cross-env E2E_MODE=sim playwright test",
+    "test:e2e:all": "pnpm test:e2e && pnpm test:e2e:dev",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ],
+    "ignoredBuiltDependencies": [
+      "better-sqlite3"
+    ]
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "5.3.0",
+    "better-sqlite3": "13.0.3",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "drizzle-orm": "0.45.4",
+    "lucide-react": "1.55.0",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1",
+    "tailwind-merge": "3.7.0",
+    "zod": "4.6.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "cross-env": "10.1.0",
+    "drizzle-kit": "0.31.11",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.0.3"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mnstechbr/Freshservice-Local-Mapper.git"
+  }
+}

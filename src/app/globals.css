@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/*
+ * Tokens do painel, medidos na referência Painel_Freshservice_Design .png (1672x941).
+ * A fonte Inter Variable é importada localmente em layout.tsx (sem CDN).
+ */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: #f0f5fa;
+  --color-foreground: #0a1a3f;
+  --color-muted-foreground: #46597a;
+  --color-card: #ffffff;
+  --color-border: #e3ebf4;
+  --color-input: #d3e4f8;
+  --color-ring: #1b6bd9;
+
+  --color-primary: #1b6bd9;
+  --color-primary-hover: #1760c4;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #edf5fd;
+  --color-secondary-foreground: #1b5fbd;
+  --color-secondary-border: #d3e4f8;
+
+  --color-sidebar: #132e4c;
+  --color-sidebar-active: #1f4b81;
+
+  --color-success: #04915b;
+  --color-success-soft: #d9f6e8;
+  --color-warning: #e56700;
+  --color-warning-soft: #ffe3bb;
+  --color-danger: #d91d13;
+  --color-danger-soft: #fdd8df;
+  --color-orange: #f28b0b;
+  --color-orange-text: #b85400;
+  --color-orange-soft: #ffe3c1;
+  --color-info-soft: #dbecfe;
+  --color-neutral-soft: #ecf2fa;
+  --color-badge-local: #ddecf9;
+
+  --radius-card: 10px;
+  --shadow-card: 0 1px 2px rgb(10 26 63 / 0.05);
+}

@@ -1,0 +1,74 @@
+# Evidência Windows Server é parcial: não homologa Windows 11 nem integração real.
+name: ci
+on:
+  push:
+    branches: ['**']
+    paths-ignore: ['docs/**', '**/*.md', 'LICENSE']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-2025
+    env:
+      FSLM_NO_BROWSER: '1'
+      NEXT_TELEMETRY_DISABLED: '1'
+      FSLM_DATA_DIR: '${{ github.workspace }}\.ci-data\windows'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.18.0'
+      - name: Pré-requisitos (verificação)
+        shell: powershell
+        run: '& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -ExecutionPolicy Bypass -File scripts\setup.ps1 -CheckOnly'
+      - run: npm run bootstrap -- --yes
+      - run: npm run bootstrap -- --no-install
+      - name: DPAPI real com segredo fictício
+        run: npm exec --yes pnpm@10.34.0 -- exec tsx scripts/verify-windows.ts
+      # cenarios.test usa processos/fixtures POSIX. O job Fedora executa esses cenários reais.
+      - run: npm exec --yes pnpm@10.34.0 -- exec vitest run --exclude tests/bootstrap/cenarios.test.ts
+      - run: npm exec --yes pnpm@10.34.0 -- typecheck
+      - run: npm exec --yes pnpm@10.34.0 -- build
+  fedora:
+    runs-on: ubuntu-24.04
+    container: registry.fedoraproject.org/fedora:44
+    env:
+      FSLM_NO_BROWSER: '1'
+      NEXT_TELEMETRY_DISABLED: '1'
+      FSLM_DATA_DIR: '${{ github.workspace }}/.ci-data/fedora'
+    steps:
+      - name: Ferramentas do checkout
+        run: dnf -y install git-core tar gzip
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/setup.sh --yes
+      - run: npm run bootstrap -- --yes
+      - run: npm run bootstrap -- --no-install
+      - run: npm exec --yes pnpm@10.34.0 -- test
+      - run: npm exec --yes pnpm@10.34.0 -- typecheck
+      - run: npm exec --yes pnpm@10.34.0 -- build
+  browser:
+    runs-on: ubuntu-24.04
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.18.0'
+      - run: npm exec --yes pnpm@10.34.0 -- install --frozen-lockfile
+      - run: npm exec --yes pnpm@10.34.0 -- exec playwright install --with-deps chromium
+      - run: npm exec --yes pnpm@10.34.0 -- test:e2e
+      - run: npm exec --yes pnpm@10.34.0 -- test:e2e:sim
+      - run: npm exec --yes pnpm@10.34.0 -- test:e2e:dev
