@@ -45,16 +45,20 @@ jobs:
       FSLM_DATA_DIR: '${{ github.workspace }}/.ci-data/fedora'
     steps:
       - name: Ferramentas do checkout
-        run: dnf -y install git-core tar gzip
+        run: dnf -y install git-core tar gzip shadow-utils util-linux
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: bash scripts/setup.sh --yes
-      - run: npm run bootstrap -- --yes
-      - run: npm run bootstrap -- --no-install
-      - run: npm exec --yes pnpm@10.34.0 -- test
-      - run: npm exec --yes pnpm@10.34.0 -- typecheck
-      - run: npm exec --yes pnpm@10.34.0 -- build
+      - name: Usuário sem privilégios para os testes POSIX
+        run: |
+          useradd --uid 1001 --create-home mapper-ci
+          chown -R mapper-ci:mapper-ci "$GITHUB_WORKSPACE"
+      - run: runuser -u mapper-ci -- npm run bootstrap -- --yes
+      - run: runuser -u mapper-ci -- npm run bootstrap -- --no-install
+      - run: runuser -u mapper-ci -- npm exec --yes pnpm@10.34.0 -- test
+      - run: runuser -u mapper-ci -- npm exec --yes pnpm@10.34.0 -- typecheck
+      - run: runuser -u mapper-ci -- npm exec --yes pnpm@10.34.0 -- build
   browser:
     runs-on: ubuntu-24.04
     env:

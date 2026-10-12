@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { randomBytes } from 'node:crypto';
 import { defineConfig, devices } from '@playwright/test';
 
 /*
@@ -106,6 +107,10 @@ export default defineConfig({
       PORT: String(PORTA),
       FSLM_NO_BROWSER: '1',
       FSLM_DATA_DIR: E2E_DATA_DIR,
+      // Cofre cifrado exclusivo desta rodada: nunca herda chave ou sessão D-Bus do usuário.
+      FSLM_SECRET_KEY: randomBytes(32).toString('base64'),
+      DBUS_SESSION_BUS_ADDRESS: `unix:path=${path.join(E2E_DATA_DIR, 'dbus-inexistente')}`,
+      DISPLAY: '',
       // Explícito nos três modos: a flag do shell nunca liga o simulador em prod/dev. Só o modo sim a liga.
       FSLM_SIMULATOR: SIM ? '1' : '0',
       NEXT_TELEMETRY_DISABLED: '1',

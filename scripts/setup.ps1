@@ -121,7 +121,7 @@ function Test-VcBuildTool {
 function Step-WindowsVersion {
     $build = [System.Environment]::OSVersion.Version.Build
     if ($build -ge 22000) {
-        Show-Ok "Windows 11 detectado (build $build)."
+        Show-Ok "Windows detectado (build $build); o número da build não distingue Windows cliente de Windows Server."
     } else {
         Show-Warn "Build $build (abaixo de 22000, Windows 11): não testado neste ambiente."
     }
