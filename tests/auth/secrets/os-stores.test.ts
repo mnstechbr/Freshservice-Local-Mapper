@@ -192,10 +192,14 @@ describe('Windows: DPAPI via PowerShell', () => {
     expect(script).toContain('($input -join');
     expect(script).not.toContain('[Console]::In');
     expect(script).toContain('FSLM_DPAPI_FAIL_EMPTY');
+    expect(script).toContain("Import-Module -Name ($PSHOME + '\\Modules\\Microsoft.PowerShell.Security\\Microsoft.PowerShell.Security.psd1') -ErrorAction Stop");
+    expect(script.indexOf('Import-Module')).toBeLessThan(script.indexOf('ConvertTo-SecureString'));
+    expect(script).toContain('FSLM_DPAPI_KIND_COMMAND_MISSING');
+    expect(script).toContain('FSLM_DPAPI_KIND_EMPTY_ARGUMENT');
     expect(script).toContain('[Text.Encoding]::UTF8');
     expect(script).toContain("$ErrorActionPreference = 'Stop'");
     for (const stage of ['READ', 'DECODE', 'SECURE', 'PROTECT']) {
-      expect(script).toContain(`[Console]::Error.Write('FSLM_DPAPI_FAIL_${stage}')`);
+      expect(script).toContain(`[Console]::Error.Write('FSLM_DPAPI_FAIL_${stage} ')`);
     }
     expect(script).not.toContain('Exception.Message');
     expect(script).not.toContain('Write-Error');

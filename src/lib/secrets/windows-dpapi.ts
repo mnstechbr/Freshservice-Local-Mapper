@@ -39,14 +39,32 @@ const HEX_PATTERN = /^[0-9a-fA-F]+$/;
  * de aspas do Windows, e a execução não depende de ExecutionPolicy (que vale só para arquivos .ps1).
  */
 
+/** Só rótulos fixos: IDs e tipos são inspecionados, nunca impressos. */
+const FAILURE_KIND_SCRIPT = [
+  "if ($_.Exception -is [System.Management.Automation.CommandNotFoundException]) { [Console]::Error.Write('FSLM_DPAPI_KIND_COMMAND_MISSING') }",
+  "elseif ($_.FullyQualifiedErrorId -match 'ParameterArgumentValidationError(EmptyString|Null)NotAllowed') { [Console]::Error.Write('FSLM_DPAPI_KIND_EMPTY_ARGUMENT') }",
+  "elseif ($_.FullyQualifiedErrorId -match 'Modules_(InsufficientPowerShellVersion|InvalidManifest|UnsupportedPowerShellVersion)|ModuleRequiresNewerPowerShellVersion' -or $_.Exception -is [System.BadImageFormatException] -or $_.Exception -is [System.IO.FileLoadException]) { [Console]::Error.Write('FSLM_DPAPI_KIND_MODULE_INCOMPATIBLE') }",
+  "elseif ($_.FullyQualifiedErrorId -match 'ConstrainedLanguage|MethodInvocationNotSupported|CannotCreateType') { [Console]::Error.Write('FSLM_DPAPI_KIND_LANGUAGE_RESTRICTED') }",
+  "elseif ($_.Exception -is [System.Security.Cryptography.CryptographicException] -or $_.Exception.InnerException -is [System.Security.Cryptography.CryptographicException]) { [Console]::Error.Write('FSLM_DPAPI_KIND_CRYPTOGRAPHIC') }",
+  "else { [Console]::Error.Write('FSLM_DPAPI_KIND_UNKNOWN') }",
+].join(' ');
+
 /** Diagnóstico fechado: nenhum conteúdo da exceção, entrada ou script vai para stderr. */
 function checkedStep(statement: string, stage: string): string {
-  return `try { ${statement} } catch { [Console]::Error.Write('FSLM_DPAPI_FAIL_${stage}'); exit 1 }`;
+  return `try { ${statement} } catch { [Console]::Error.Write('FSLM_DPAPI_FAIL_${stage} '); ${FAILURE_KIND_SCRIPT}; exit 1 }`;
 }
+
+// PowerShell 7 → Node → Windows PowerShell 5.1 pode herdar PSModulePath com módulos Core.
+// Import explícito do módulo nativo do executável escolhido: não depende da busca herdada.
+const IMPORT_SECURITY_MODULE = checkedStep(
+  "Import-Module -Name ($PSHOME + '\\Modules\\Microsoft.PowerShell.Security\\Microsoft.PowerShell.Security.psd1') -ErrorAction Stop",
+  'MODULE',
+);
 
 /** Gravação. stdin = base64(UTF-8 do JSON). Saída = texto cifrado pelo DPAPI do usuário atual (hex). */
 const PROTECT_SCRIPT = [
   "$ErrorActionPreference = 'Stop'",
+  IMPORT_SECURITY_MODULE,
   checkedStep('$inputText = ($input -join "").Trim()', 'READ'),
   "if ($inputText.Length -eq 0) { [Console]::Error.Write('FSLM_DPAPI_FAIL_EMPTY'); exit 1 }",
   checkedStep('$json = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($inputText))', 'DECODE'),
@@ -60,6 +78,7 @@ const PROTECT_SCRIPT = [
  */
 const UNPROTECT_SCRIPT = [
   "$ErrorActionPreference = 'Stop'",
+  IMPORT_SECURITY_MODULE,
   checkedStep('$inputText = ($input -join "").Trim()', 'READ'),
   "if ($inputText.Length -eq 0) { [Console]::Error.Write('FSLM_DPAPI_FAIL_EMPTY'); exit 1 }",
   checkedStep('$secure = ConvertTo-SecureString -String $inputText', 'UNPROTECT'),

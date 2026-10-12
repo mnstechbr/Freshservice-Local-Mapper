@@ -16,11 +16,19 @@ export function classifySmokeFailure(error: unknown): string {
 /** Reconhece só marcadores literais emitidos pelo script DPAPI; nenhuma captura é devolvida. */
 export function classifyDpapiStderr(stderr: string): string {
   if (!stderr.trim()) return 'none';
-  for (const stage of ['EMPTY', 'READ', 'DECODE', 'SECURE', 'PROTECT', 'UNPROTECT', 'BSTR', 'ENCODE']) {
+  for (const stage of ['MODULE', 'EMPTY', 'READ', 'DECODE', 'SECURE', 'PROTECT', 'UNPROTECT', 'BSTR', 'ENCODE']) {
     if (stderr.includes(`FSLM_DPAPI_FAIL_${stage}`)) return `dpapi_${stage.toLowerCase()}_failed`;
   }
   if (/ParserError|UnexpectedToken|MissingEndParenthesis/i.test(stderr)) return 'powershell_parser_error';
   return 'unclassified_stderr';
+}
+
+/** Classificação complementar fechada, sem devolver FullyQualifiedErrorId nem exception type. */
+export function classifyDpapiErrorKind(stderr: string): string {
+  for (const kind of ['COMMAND_MISSING', 'EMPTY_ARGUMENT', 'MODULE_INCOMPATIBLE', 'LANGUAGE_RESTRICTED', 'CRYPTOGRAPHIC', 'UNKNOWN']) {
+    if (stderr.includes(`FSLM_DPAPI_KIND_${kind}`)) return kind.toLowerCase();
+  }
+  return 'unspecified';
 }
 
 /** Instrumenta sem imprimir comando, argumentos, input, stdout, stderr ou mensagens do runner. */
@@ -35,7 +43,7 @@ export function observeSmokeRunner(
     report(`process=${id} start timeoutMs=${options?.timeoutMs ?? 10_000}`);
     try {
       const result = await run(command, args, options);
-      report(`process=${id} end elapsedMs=${Date.now() - started} exitCode=${result.code} stderrKind=${classifyDpapiStderr(result.stderr)}`);
+      report(`process=${id} end elapsedMs=${Date.now() - started} exitCode=${result.code} stderrKind=${classifyDpapiStderr(result.stderr)} errorKind=${classifyDpapiErrorKind(result.stderr)}`);
       return result;
     } catch (error) {
       report(`process=${id} failed elapsedMs=${Date.now() - started} kind=${classifySmokeFailure(error)}`);

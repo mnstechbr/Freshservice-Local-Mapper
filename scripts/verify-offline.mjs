@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { chromium } from '@playwright/test';
+import { chromium, expect } from '@playwright/test';
 
 const root = realpathSync('.e2e-data');
 const supplied = process.argv[2];
@@ -55,12 +55,12 @@ try {
   const status = await (await fetch(`${origin}/api/connection/status`)).json();
   assert.equal(status.status, 'disconnected');
   assert.equal((await page.goto(`${origin}/tickets?q=Ticket%20estabilizado`)).status(), 200);
-  assert.match(await page.locator('body').innerText(), /Ticket estabilizado sintético/);
+  await expect(page.locator('body')).toContainText('Ticket estabilizado sintético');
   assert.equal((await page.goto(`${origin}/recursos/${ticket.id}`)).status(), 200);
-  assert.equal(await page.locator('[aria-labelledby="versoes"] li').count(), 2);
+  await expect(page.locator('[aria-labelledby="versoes"] li')).toHaveCount(2);
   assert.equal((await page.goto(`${origin}/historico`)).status(), 200);
   assert.equal((await page.goto(`${origin}/diferencas`)).status(), 200);
-  assert.match(await page.locator('body').innerText(), /Ticket estabilizado sintético/);
+  await expect(page.locator('body')).toContainText('Ticket estabilizado sintético');
   assert.equal(count(), before, 'Reinício não pode alterar versões.');
   assert.deepEqual(errors, []);
   assert.deepEqual(unexpected, []);

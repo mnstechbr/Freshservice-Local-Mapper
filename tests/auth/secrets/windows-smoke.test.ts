@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CommandTimeoutError, type CommandRunner } from '../../../src/lib/secrets/command';
 import { SecretStoreError } from '../../../src/lib/secrets/types';
-import { classifySmokeFailure, classifyDpapiStderr, observeSmokeRunner } from '../../../scripts/lib/windows-smoke';
+import { classifySmokeFailure, classifyDpapiStderr, classifyDpapiErrorKind, observeSmokeRunner } from '../../../scripts/lib/windows-smoke';
 
 describe('diagnóstico seguro do smoke Windows', () => {
   const sentinel = 'SEGREDO-SINTETICO-NAO-LOGAR';
@@ -19,7 +19,7 @@ describe('diagnóstico seguro do smoke Windows', () => {
     expect(await observeSmokeRunner(run, (line) => lines.push(line))(sentinel, [sentinel], options)).toBe(result);
     expect(lines).toHaveLength(2);
     expect(lines[0]).toBe('process=1 start timeoutMs=20000');
-    expect(lines[1]).toMatch(/^process=1 end elapsedMs=\d+ exitCode=7 stderrKind=unclassified_stderr$/);
+    expect(lines[1]).toMatch(/^process=1 end elapsedMs=\d+ exitCode=7 stderrKind=unclassified_stderr errorKind=unspecified$/);
     expect(lines.join('\n')).not.toContain(sentinel);
   });
 
@@ -41,13 +41,22 @@ describe('diagnóstico seguro do smoke Windows', () => {
     expect(classifySmokeFailure(Object.assign(new Error(sentinel), { code }))).toBe(kind);
   });
 
-  it.each(['EMPTY', 'READ', 'DECODE', 'SECURE', 'PROTECT', 'UNPROTECT', 'BSTR', 'ENCODE'])('diagnóstico DPAPI fechado por etapa %s não vaza conteúdo', async (stage) => {
+  it.each(['MODULE', 'EMPTY', 'READ', 'DECODE', 'SECURE', 'PROTECT', 'UNPROTECT', 'BSTR', 'ENCODE'])('diagnóstico DPAPI fechado por etapa %s não vaza conteúdo', async (stage) => {
     const lines: string[] = [];
     const stderr = `FSLM_DPAPI_FAIL_${stage} ${sentinel}`;
     const runner = observeSmokeRunner(async () => ({ code: 1, stdout: sentinel, stderr }), (line) => lines.push(line));
     await runner(sentinel, [sentinel], { input: sentinel });
     expect(classifyDpapiStderr(stderr)).toBe(`dpapi_${stage.toLowerCase()}_failed`);
     expect(lines[1]).toContain(`stderrKind=dpapi_${stage.toLowerCase()}_failed`);
+    expect(lines.join(' ')).not.toContain(sentinel);
+  });
+
+  it.each(['COMMAND_MISSING', 'EMPTY_ARGUMENT', 'MODULE_INCOMPATIBLE', 'LANGUAGE_RESTRICTED', 'CRYPTOGRAPHIC', 'UNKNOWN'])('classifica erro fechado %s sem imprimir IDs, tipos ou valores', async (kind) => {
+    const lines: string[] = [];
+    const stderr = `FSLM_DPAPI_FAIL_SECURE FSLM_DPAPI_KIND_${kind} ${sentinel}`;
+    await observeSmokeRunner(async () => ({ code: 1, stdout: sentinel, stderr }), (line) => lines.push(line))(sentinel, [], { input: sentinel });
+    expect(classifyDpapiErrorKind(stderr)).toBe(kind.toLowerCase());
+    expect(lines[1]).toContain(`errorKind=${kind.toLowerCase()}`);
     expect(lines.join(' ')).not.toContain(sentinel);
   });
 
