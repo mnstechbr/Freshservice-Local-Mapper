@@ -6,9 +6,9 @@ Atualizado em 2026-10-12. As evidências usam Fedora 44, Node 24.18.0, pnpm 10.3
 
 | Verificação | Resultado |
 |---|---|
-| Unitários finais | 73 arquivos, 897 passaram / 3 pesados pulados e executados à parte |
+| Unitários finais | 73 arquivos, 906 passaram / 3 pesados pulados e executados à parte |
 | Instalação real e idempotência Fedora (QA_HEAVY) | 13/13 cenários passaram em uma rodada integral, incluindo C4, C4b e C6 |
-| Autenticação e segurança | 24 arquivos, 341 testes passaram |
+| Autenticação e segurança | 24 arquivos, 350 testes passaram |
 | Read-Only, sync, módulos e sanitização | 15 arquivos, 137 testes passaram |
 | Typecheck | Passou |
 | Build de produção local | Passou nas execuções do simulador e produção local |
@@ -43,7 +43,7 @@ Reinício offline: depois da rodada do simulador, `node scripts/verify-offline.m
 
 State forjado, ausente, expirado, reutilizado e callback diferente são recusados. HMAC vincula callback exato, perfil e instância; ticket de passagem de 60s é consumido atomicamente; state tem cookie HttpOnly/Lax host-only. Localhost e 127.0.0.1 não compartilham cookies/origem: a autenticação inicia no host do perfil, e documento de conclusão retorna ao dashboard canônico. CSRF, Host, Origin, Sec-Fetch-Site, CSP e redirects restritos permanecem.
 
-Com perfil configurado, o dashboard passa automaticamente a Conectado. Sem perfil, informa configuração administrativa ausente sem popup. Renovação aceita continua conectada; recusa definitiva apaga tokens; rede/429/5xx mantêm segredos. Desconexão remove tokens locais, preserva histórico e não revoga autorização remota.
+Com perfil configurado, o dashboard passa automaticamente a Conectado. Sem perfil, informa configuração administrativa ausente sem popup. Renovação aceita continua conectada; 401 antecipado no teste de conexão permite uma única renovação e um GET com o token novo. Chamadas concorrentes compartilham refresh, e desconexão durante a renovação não reabre a sessão. Recusa definitiva apaga tokens; rede/429/5xx mantêm segredos. Desconexão remove tokens locais, preserva histórico e não revoga autorização remota.
 
 ## 4. Read-Only e diferenças
 
@@ -55,7 +55,7 @@ Unitários exercitam renomeação, item criado/removido, campos/formulários, ca
 
 Fedora: setup.sh --check passou, instalação com rede, migrations/backup, reinício/idempotência, SQLite e servidor local foram executados. XDG/permissões e indisponibilidade do cofre estão nos testes. Presença de secret-tool não comprova cofre Secret Service real funcionando.
 
-O [CI final](https://github.com/mnstechbr/Freshservice-Local-Mapper/actions/runs/38238370583) passou no commit 7b7a68d. Fedora: bootstrap, 896 unitários/3 pesados pulados, typecheck e build. Windows Server 2025: bootstrap, DPAPI real com segredo fictício Unicode, 883 unitários/3 POSIX pulados, typecheck e build; cenários de bootstrap POSIX rodam em Fedora. Navegador Ubuntu: 25 produção, 15 simulador, 25 dev. Nenhum resultado de Server equivale a Windows 11. Winget/UAC, navegador/encerramento e ciclo completo do cofre/aplicativo em Windows 11 ainda exigem validação autorizada.
+O [CI final aprovado](https://github.com/mnstechbr/Freshservice-Local-Mapper/actions/runs/38267542875) passou no commit 24d1ae4. Fedora: bootstrap, 906 unitários/3 pesados pulados, typecheck e build. Windows Server 2025: bootstrap, DPAPI real com segredo fictício Unicode, 893 unitários/3 POSIX pulados, typecheck e build; cenários de bootstrap POSIX rodam em Fedora. Navegador Ubuntu: 25 produção, 15 simulador, 25 dev. Nenhum resultado de Server equivale a Windows 11. Winget/UAC, navegador/encerramento e ciclo completo do cofre/aplicativo em Windows 11 ainda exigem validação autorizada.
 
 ## 6. Publicação
 
@@ -69,7 +69,7 @@ Remoto confirmado: https://github.com/mnstechbr/Freshservice-Local-Mapper. Titul
 - Sanitização por nome não analisa texto livre; nomes/assuntos/custom_fields permanecem. Históricos antigos podem conter contatos e aparecer em diferenças.
 - Rotas administrativas têm proteção de origem/Host, sem identidade/login local; usuário/programa local continua sendo limite de confiança.
 - DNS validado antes do fetch, resolução posterior ainda permite risco residual de rebinding; CSP tem unsafe-inline por Next/React, cookie local HTTP sem Secure.
-- Refresh compartilhado só dentro do processo e pelo motor; evitar múltiplos processos simultâneos no mesmo banco.
+- Refresh compartilhado só dentro do processo, por banco/conexão, no resolvedor OAuth; evitar múltiplos processos simultâneos no mesmo banco.
 - pnpm hash via Corepack; fallback npm exec e pnpm existente dependem da confiança local/registro. Imagem Fedora fixada por versão, com tag mutável.
 - Aviso esbuild em ferramenta de desenvolvimento: não expor servidores de desenvolvimento/studio à rede. Não alterado por override transitivo nesta beta.
 - Testes unitários simulados não são validação visual pixel a pixel. Capturas públicas usam somente demonstração fictícia.
