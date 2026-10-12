@@ -16,7 +16,7 @@ export function classifySmokeFailure(error: unknown): string {
 /** Reconhece só marcadores literais emitidos pelo script DPAPI; nenhuma captura é devolvida. */
 export function classifyDpapiStderr(stderr: string): string {
   if (!stderr.trim()) return 'none';
-  for (const stage of ['READ', 'DECODE', 'SECURE', 'PROTECT', 'UNPROTECT', 'BSTR', 'ENCODE']) {
+  for (const stage of ['EMPTY', 'READ', 'DECODE', 'SECURE', 'PROTECT', 'UNPROTECT', 'BSTR', 'ENCODE']) {
     if (stderr.includes(`FSLM_DPAPI_FAIL_${stage}`)) return `dpapi_${stage.toLowerCase()}_failed`;
   }
   if (/ParserError|UnexpectedToken|MissingEndParenthesis/i.test(stderr)) return 'powershell_parser_error';

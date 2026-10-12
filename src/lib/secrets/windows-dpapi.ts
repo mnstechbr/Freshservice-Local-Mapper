@@ -31,7 +31,9 @@ const HEX_PATTERN = /^[0-9a-fA-F]+$/;
  * ([Console]::InputEncoding/OutputEncoding, p. ex. CP850 em pt-BR), e não com UTF-8. Um segredo com
  * acento ou símbolo seria corrompido em silêncio. Por isso o texto trafega sempre em base64 (ASCII) e
  * o script converte para UTF-8 com [Text.Encoding]::UTF8. O base64 existe só no canal entre processos
- * (stdin/stdout). O arquivo gravado é só o texto cifrado pelo DPAPI (saída de ConvertFrom-SecureString).
+ * (stdin/stdout). A entrada é consumida por `$input` com `-InputFormat Text`: o host PowerShell
+ * entrega stdin ao pipeline, portanto Console.In pode já estar vazio. Nunca usamos stdin como código.
+ * O arquivo gravado é só o texto cifrado pelo DPAPI (saída de ConvertFrom-SecureString).
  *
  * Os scripts vão em -EncodedCommand (UTF-16LE em base64): nenhum caractere do script passa pelas regras
  * de aspas do Windows, e a execução não depende de ExecutionPolicy (que vale só para arquivos .ps1).
@@ -45,7 +47,8 @@ function checkedStep(statement: string, stage: string): string {
 /** Gravação. stdin = base64(UTF-8 do JSON). Saída = texto cifrado pelo DPAPI do usuário atual (hex). */
 const PROTECT_SCRIPT = [
   "$ErrorActionPreference = 'Stop'",
-  checkedStep('$inputText = [Console]::In.ReadToEnd().Trim()', 'READ'),
+  checkedStep('$inputText = ($input -join "").Trim()', 'READ'),
+  "if ($inputText.Length -eq 0) { [Console]::Error.Write('FSLM_DPAPI_FAIL_EMPTY'); exit 1 }",
   checkedStep('$json = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($inputText))', 'DECODE'),
   checkedStep('$secure = ConvertTo-SecureString -String $json -AsPlainText -Force', 'SECURE'),
   checkedStep('[Console]::Out.Write((ConvertFrom-SecureString -SecureString $secure))', 'PROTECT'),
@@ -57,7 +60,8 @@ const PROTECT_SCRIPT = [
  */
 const UNPROTECT_SCRIPT = [
   "$ErrorActionPreference = 'Stop'",
-  checkedStep('$inputText = [Console]::In.ReadToEnd().Trim()', 'READ'),
+  checkedStep('$inputText = ($input -join "").Trim()', 'READ'),
+  "if ($inputText.Length -eq 0) { [Console]::Error.Write('FSLM_DPAPI_FAIL_EMPTY'); exit 1 }",
   checkedStep('$secure = ConvertTo-SecureString -String $inputText', 'UNPROTECT'),
   checkedStep('$bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)', 'BSTR'),
   checkedStep('try { $json = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr); [Console]::Out.Write([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }', 'ENCODE'),
@@ -65,7 +69,7 @@ const UNPROTECT_SCRIPT = [
 
 function powershellArgs(script: string): string[] {
   const encoded = Buffer.from(script, 'utf16le').toString('base64');
-  return ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded];
+  return ['-NoProfile', '-NonInteractive', '-InputFormat', 'Text', '-EncodedCommand', encoded];
 }
 
 /**

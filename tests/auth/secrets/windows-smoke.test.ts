@@ -41,7 +41,7 @@ describe('diagnóstico seguro do smoke Windows', () => {
     expect(classifySmokeFailure(Object.assign(new Error(sentinel), { code }))).toBe(kind);
   });
 
-  it.each(['READ', 'DECODE', 'SECURE', 'PROTECT', 'UNPROTECT', 'BSTR', 'ENCODE'])('diagnóstico DPAPI fechado por etapa %s não vaza conteúdo', async (stage) => {
+  it.each(['EMPTY', 'READ', 'DECODE', 'SECURE', 'PROTECT', 'UNPROTECT', 'BSTR', 'ENCODE'])('diagnóstico DPAPI fechado por etapa %s não vaza conteúdo', async (stage) => {
     const lines: string[] = [];
     const stderr = `FSLM_DPAPI_FAIL_${stage} ${sentinel}`;
     const runner = observeSmokeRunner(async () => ({ code: 1, stdout: sentinel, stderr }), (line) => lines.push(line));

@@ -188,6 +188,10 @@ describe('Windows: DPAPI via PowerShell', () => {
     const encoded = args[args.indexOf('-EncodedCommand') + 1] ?? '';
     const script = Buffer.from(encoded, 'base64').toString('utf16le');
     expect(args).not.toContain('-Command');
+    expect(args.slice(args.indexOf('-InputFormat'), args.indexOf('-InputFormat') + 2)).toEqual(['-InputFormat', 'Text']);
+    expect(script).toContain('($input -join');
+    expect(script).not.toContain('[Console]::In');
+    expect(script).toContain('FSLM_DPAPI_FAIL_EMPTY');
     expect(script).toContain('[Text.Encoding]::UTF8');
     expect(script).toContain("$ErrorActionPreference = 'Stop'");
     for (const stage of ['READ', 'DECODE', 'SECURE', 'PROTECT']) {
