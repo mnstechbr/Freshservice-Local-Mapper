@@ -37,12 +37,18 @@ const HEX_PATTERN = /^[0-9a-fA-F]+$/;
  * de aspas do Windows, e a execução não depende de ExecutionPolicy (que vale só para arquivos .ps1).
  */
 
+/** Diagnóstico fechado: nenhum conteúdo da exceção, entrada ou script vai para stderr. */
+function checkedStep(statement: string, stage: string): string {
+  return `try { ${statement} } catch { [Console]::Error.Write('FSLM_DPAPI_FAIL_${stage}'); exit 1 }`;
+}
+
 /** Gravação. stdin = base64(UTF-8 do JSON). Saída = texto cifrado pelo DPAPI do usuário atual (hex). */
 const PROTECT_SCRIPT = [
   "$ErrorActionPreference = 'Stop'",
-  '$json = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String([Console]::In.ReadToEnd().Trim()))',
-  '$secure = ConvertTo-SecureString -String $json -AsPlainText -Force',
-  '[Console]::Out.Write((ConvertFrom-SecureString -SecureString $secure))',
+  checkedStep('$inputText = [Console]::In.ReadToEnd().Trim()', 'READ'),
+  checkedStep('$json = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($inputText))', 'DECODE'),
+  checkedStep('$secure = ConvertTo-SecureString -String $json -AsPlainText -Force', 'SECURE'),
+  checkedStep('[Console]::Out.Write((ConvertFrom-SecureString -SecureString $secure))', 'PROTECT'),
 ].join('\n');
 
 /**
@@ -51,9 +57,10 @@ const PROTECT_SCRIPT = [
  */
 const UNPROTECT_SCRIPT = [
   "$ErrorActionPreference = 'Stop'",
-  '$secure = ConvertTo-SecureString -String ([Console]::In.ReadToEnd().Trim())',
-  '$bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)',
-  'try { $json = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr); [Console]::Out.Write([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }',
+  checkedStep('$inputText = [Console]::In.ReadToEnd().Trim()', 'READ'),
+  checkedStep('$secure = ConvertTo-SecureString -String $inputText', 'UNPROTECT'),
+  checkedStep('$bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)', 'BSTR'),
+  checkedStep('try { $json = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr); [Console]::Out.Write([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }', 'ENCODE'),
 ].join('\n');
 
 function powershellArgs(script: string): string[] {

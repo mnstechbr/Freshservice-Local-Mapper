@@ -190,6 +190,11 @@ describe('Windows: DPAPI via PowerShell', () => {
     expect(args).not.toContain('-Command');
     expect(script).toContain('[Text.Encoding]::UTF8');
     expect(script).toContain("$ErrorActionPreference = 'Stop'");
+    for (const stage of ['READ', 'DECODE', 'SECURE', 'PROTECT']) {
+      expect(script).toContain(`[Console]::Error.Write('FSLM_DPAPI_FAIL_${stage}')`);
+    }
+    expect(script).not.toContain('Exception.Message');
+    expect(script).not.toContain('Write-Error');
   });
 
   it('recusa saída de gravação que não é hexadecimal: nada é gravado em disco', async () => {
