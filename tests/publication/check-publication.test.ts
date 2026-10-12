@@ -36,6 +36,19 @@ describe('publication: bytes e paths, sem dispensar conteúdo arbitrário dos te
     expect(rules('.env.example', `${keyName}='${confidential}'`)).toContain('credential-literal');
     expect(rules('.env.example', `${keyName.toUpperCase()}=${confidential}`)).toContain('credential-env-value');
   });
+  it('permite só a linha exata do gerador aleatório no documento revisado', () => {
+    const keyVar = ['FSLM', 'SECRET', 'KEY'].join('_');
+    const generator = `export ${keyVar}="$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))")"`;
+    expect(rules('docs/DEMONSTRACAO-SIMULADOR.md', `Texto\n${generator}\nOutro texto`)).toEqual([]);
+    expect(rules('docs/another.md', generator)).toContain('credential-literal');
+    expect(rules('docs/DEMONSTRACAO-SIMULADOR.md', ` ${generator}`)).toContain('credential-literal');
+    expect(rules('docs/DEMONSTRACAO-SIMULADOR.md', `${generator}; echo anything`)).toContain('credential-literal');
+    const constantGenerator = `export ${keyVar}="$(node -e "process.stdout.write('constant-key-789012345')")"`;
+    expect(rules('docs/DEMONSTRACAO-SIMULADOR.md', constantGenerator)).toContain('credential-literal');
+    expect(rules('docs/DEMONSTRACAO-SIMULADOR.md', `export ${keyVar}="${confidential}"`)).toContain('credential-literal');
+    expect(rules('docs/DEMONSTRACAO-SIMULADOR.md', `export ${keyVar}=${confidential}`)).toContain('credential-env-value');
+    expect(rules('docs/DEMONSTRACAO-SIMULADOR.md', `${generator}\nexport ${keyVar}="${confidential}"`)).toContain('credential-literal');
+  });
   it('valor arbitrário em teste não ganha isenção; fixture sintética conhecida sim', () => {
     expect(rules('tests/unknown.test.ts', `${keyName}='${confidential}'`)).toContain('credential-literal');
     expect(rules('tests/auth/helpers.ts', `${keyName}='FSK-SYNTHETIC-KEY-0001'`)).toEqual([]);

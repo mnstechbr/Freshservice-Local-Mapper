@@ -195,7 +195,7 @@ Tudo abaixo foi validado contra o **simulador local**, com `FSLM_SIMULATOR=1`. *
   11. Erro de rede: "Erro de conexão" mantém os tokens. Ao voltar, Conectado sem novo login.
   12. Callback 127.0.0.1: regressão de login e atualização automática para Conectado.
 
-**Testes automatizados de apoio** (`pnpm test`, 73 arquivos, 896 testes passando e 3 pesados pulados, executados separadamente), entre eles:
+**Testes automatizados de apoio** (`pnpm test`, 73 arquivos, 897 testes passando e 3 pesados pulados, executados separadamente), entre eles:
 
 - `tests/simulator/` (guardas, fluxo OAuth, API e layout da faixa);
 - `tests/auth/profiles.test.ts` (perfis, escopos e consentimento `.manage`/`.edit`);

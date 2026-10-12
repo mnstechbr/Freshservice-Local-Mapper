@@ -6,7 +6,7 @@ Atualizado em 2026-10-12. As evidências usam Fedora 44, Node 24.18.0, pnpm 10.3
 
 | Verificação | Resultado |
 |---|---|
-| Unitários finais | 73 arquivos, 896 passaram / 3 pesados pulados e executados à parte |
+| Unitários finais | 73 arquivos, 897 passaram / 3 pesados pulados e executados à parte |
 | Instalação real e idempotência Fedora (QA_HEAVY) | 13/13 cenários passaram em uma rodada integral, incluindo C4, C4b e C6 |
 | Autenticação e segurança | 24 arquivos, 341 testes passaram |
 | Read-Only, sync, módulos e sanitização | 15 arquivos, 137 testes passaram |

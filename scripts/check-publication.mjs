@@ -44,6 +44,17 @@ const isFixture = (path) => path.startsWith('tests/') || path === 'src/lib/simul
 const isSyntheticLiteral = (path, value) => isFixture(path) && (SYNTHETIC_CREDENTIALS.has(value) || /^\$\{[A-Z][A-Z0-9_]*\}$/.test(value));
 const lineAt = (text, offset) => text.slice(0, offset).split('\n').length;
 
+// Exemplo de geração aleatória revisado. A comparação exige caminho e linha inteira exatos;
+// não dispensa outras atribuições no documento, comandos $(...) nem geradores constantes.
+const REVIEWED_RANDOM_KEY_LINE = `export ${['FSLM', 'SECRET', 'KEY'].join('_')}="$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))")"`;
+function isReviewedRandomKeyLine(path, text, offset) {
+  if (path !== 'docs/DEMONSTRACAO-SIMULADOR.md') return false;
+  const start = text.lastIndexOf('\n', offset - 1) + 1;
+  const end = text.indexOf('\n', offset);
+  return text.slice(start, end === -1 ? text.length : end) === REVIEWED_RANDOM_KEY_LINE;
+}
+
+
 /** Retorna só categorias e linhas. Valores sensíveis nunca saem desta função. */
 export function inspectBlob(path, bytes, reviewedImages = new Map()) {
   const findings = [];
@@ -65,7 +76,7 @@ export function inspectBlob(path, bytes, reviewedImages = new Map()) {
   }
   const credentials = /\b(?:api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token|password|FSLM_SECRET_KEY)\s*['"]?\s*[:=]\s*(['"])([^'"\r\n]{8,})\1/gi;
   for (const match of text.matchAll(credentials)) {
-    if (!isSyntheticLiteral(path, match[2])) add('credential-literal', lineAt(text, match.index));
+    if (!isSyntheticLiteral(path, match[2]) && !isReviewedRandomKeyLine(path, text, match.index)) add('credential-literal', lineAt(text, match.index));
   }
   // Valores reais copiados para modelos .env também são detectados sem aspas.
   const envCredentials = /^\s*(?:export\s+)?(?:[A-Z0-9_]*(?:API_KEY|CLIENT_SECRET|ACCESS_TOKEN|REFRESH_TOKEN|PASSWORD|PRIVATE_KEY)|FSLM_SECRET_KEY)\s*=\s*([^\s'"#]{8,})\s*(?:#.*)?$/gm;
