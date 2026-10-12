@@ -195,7 +195,7 @@ Tudo abaixo foi validado contra o **simulador local**, com `FSLM_SIMULATOR=1`. *
   11. Erro de rede: "Erro de conexão" mantém os tokens. Ao voltar, Conectado sem novo login.
   12. Callback 127.0.0.1: regressão de login e atualização automática para Conectado.
 
-**Testes automatizados de apoio** (`pnpm test`, 73 arquivos, 897 testes passando e 3 pesados pulados, executados separadamente), entre eles:
+**Testes automatizados de apoio** (`pnpm test`, 73 arquivos, 906 testes passando e 3 pesados pulados, executados separadamente), entre eles:
 
 - `tests/simulator/` (guardas, fluxo OAuth, API e layout da faixa);
 - `tests/auth/profiles.test.ts` (perfis, escopos e consentimento `.manage`/`.edit`);
@@ -229,5 +229,5 @@ Checklist. Nenhum item foi concluído. Qualquer chamada real exige aprovação e
 - [ ] **`invalid_scope`.** Verificar o relato da comunidade com o escopo real do aplicativo.
 - [ ] **Validade.** Confirmar que o token de 30 min e o state de 10 min se comportam como documentado.
 - [ ] **Cofres.** DPAPI passou no CI Windows Server 2025; falta ciclo completo em Windows 11, Keychain e Secret Service reais.
-- [ ] **Backlog técnico.** Tratar o escopo `scopeKeyFor` do simulador para `tickets/{id}/*`, e a renovação entre processos (`docs/AUTH.md`, seção 16).
+- [ ] **Backlog técnico.** Renovação entre processos (`docs/AUTH.md`, seção 16). O mapa de escopos de filhos de tickets do simulador foi corrigido e testado nesta beta.
 - [ ] **Revisão.** Executar as revisões de código e de segurança com as ferramentas do projeto. Elas não foram executadas nesta etapa.

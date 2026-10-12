@@ -399,7 +399,7 @@ Esta configuração é feita **uma vez por organização Freshworks**. Ela não 
 
 1. **Descubra a URL da organização Freshworks.** Ela tem a forma `https://<org>.myfreshworks.com` (ou `.freshworks.com`). É diferente da URL do Freshservice. Ela aparece no seletor de organização do Freshworks ([artigo 50000002731](https://support.freshworks.com/en/support/solutions/articles/50000002731)).
 2. **Crie a credencial OAuth** no Developer Portal dessa organização: **OAuth Credentials → Create**. Preencha **Name** (até 3 palavras) e **Description**. O usuário vê os dois na tela de autorização.
-3. **Cadastre o Redirect URL.** Use o endereço exato que o app mostra no passo 6. O formato é `http://127.0.0.1:3000/api/auth/oauth/callback`, ajustando a porta se você mudou o `PORT`.
+3. **Cadastre o Redirect URL.** Use o endereço exato que o app mostra no passo 6. O padrão é `http://localhost:3000/api/auth/oauth/callback`, ajustando a porta se você mudou o `PORT`. Se o perfil usa `127.0.0.1`, cadastre esse host exato; os dois hosts não compartilham cookies.
 4. **Escolha somente escopos de leitura** (padrão `.view`). Escopos são fixados na criação.
 5. **Copie o Client ID e o Client Secret.**
 6. **Cadastre o perfil no app.** Em **Configurações → Administração da integração → Novo perfil de integração**, preencha:

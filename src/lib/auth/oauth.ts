@@ -555,8 +555,18 @@ function isInvalidGrant(error: unknown): boolean {
   return error.kind === 'unauthorized' || (error.kind === 'client_error' && error.status === 400);
 }
 
+/** Um refresh em voo não pode substituir logout, reconexão ou troca de identidade. */
+function assertTokenOwner(deps: AuthDeps, connection: ConnectionRow): void {
+  const current = findConnection(deps.db, connection.instanceId);
+  if (!current || current.id !== connection.id || current.authMode !== 'oauth' ||
+      current.secretRef !== connection.secretRef || current.status !== connection.status || current.status === 'disconnected') {
+    throw new AuthError('connection_not_ready', 409, 'A conexão mudou durante a renovação OAuth.');
+  }
+}
+
 /** Falha transitória (rede, 5xx, 429, cofre indisponível): mantém os tokens e marca connection_error. */
 function markTransient(deps: AuthDeps, connection: ConnectionRow, error: unknown): never {
+  assertTokenOwner(deps, connection);
   const message =
     error instanceof AuthError || error instanceof FreshserviceError
       ? error.message
@@ -580,6 +590,7 @@ function markTransient(deps: AuthDeps, connection: ConnectionRow, error: unknown
 
 /** Sessão encerrada pelo provedor: os tokens locais são apagados e é preciso reconectar. */
 async function endSession(deps: AuthDeps, connection: ConnectionRow, error: unknown): Promise<never> {
+  assertTokenOwner(deps, connection);
   saveConnection(
     deps.db,
     connection.instanceId,
@@ -609,7 +620,57 @@ async function endSession(deps: AuthDeps, connection: ConnectionRow, error: unkn
  * Só a recusa do provedor no refresh (400/401 ou refresh inválido) encerra a sessão e apaga tokens.
  * Erros transitórios (cofre, rede, 5xx, 429) deixam os tokens no lugar e marcam connection_error.
  */
-export async function resolveOAuthAccessToken(deps: AuthDeps, connection: ConnectionRow): Promise<string> {
+interface ResolveTokenOptions {
+  /** Só para um token efetivamente recusado com 401; não modifica retries do transporte. */
+  rejectedAccessToken?: string;
+}
+
+interface TokenFlight { promise: Promise<string>; refreshing: boolean }
+
+/** Compartilhada entre rotas/teste/sync, mas isolada por banco e conexão. Sobrevive ao HMR. */
+function tokenFlights(deps: AuthDeps): Map<number, TokenFlight> {
+  const holder = globalThis as unknown as { __fslmTokenFlights?: WeakMap<AuthDeps['db'], Map<number, TokenFlight>> };
+  holder.__fslmTokenFlights ??= new WeakMap();
+  let flights = holder.__fslmTokenFlights.get(deps.db);
+  if (!flights) {
+    flights = new Map();
+    holder.__fslmTokenFlights.set(deps.db, flights);
+  }
+  return flights;
+}
+
+export async function resolveOAuthAccessToken(
+  deps: AuthDeps, connection: ConnectionRow, options: ResolveTokenOptions = {},
+): Promise<string> {
+  const flights = tokenFlights(deps);
+  const running = flights.get(connection.id);
+  if (running) {
+    const token = await running.promise;
+    // Uma resolução sem refresh pode ter entregue o token antigo a um GET concorrente.
+    // Só quem viu esse token recusado precisa renovar; quem já recebeu a rotação a reutiliza.
+    if (running.refreshing || options.rejectedAccessToken === undefined || token !== options.rejectedAccessToken) return token;
+    const followup = flights.get(connection.id);
+    if (followup) return followup.promise;
+  }
+  // O chamador pode estar com a linha anterior à rotação. Nunca releia a referência antiga do cofre.
+  const current = findConnection(deps.db, connection.instanceId);
+  if (!current) throw new AuthError('no_secret', 409, 'Sem conexão OAuth armazenada. Reconecte.');
+  if (current.authMode !== 'oauth' || current.status === 'disconnected') {
+    throw new AuthError('connection_not_ready', 409, 'A conexão OAuth não está ativa.');
+  }
+  const refreshing = options.rejectedAccessToken !== undefined || current.tokenExpiresAt === null ||
+    current.tokenExpiresAt - deps.now() <= OAUTH_REFRESH_MARGIN_MS;
+  const flight: TokenFlight = {
+    refreshing,
+    promise: resolveToken(deps, current, options).finally(() => {
+      if (flights.get(connection.id) === flight) flights.delete(connection.id);
+    }),
+  };
+  flights.set(connection.id, flight);
+  return flight.promise;
+}
+
+async function resolveToken(deps: AuthDeps, connection: ConnectionRow, options: ResolveTokenOptions): Promise<string> {
   if (!connection.secretRef) {
     throw new AuthError('no_secret', 409, 'Sem tokens OAuth armazenados. Reconecte.');
   }
@@ -627,7 +688,11 @@ export async function resolveOAuthAccessToken(deps: AuthDeps, connection: Connec
   if (!stored) throw new AuthError('no_secret', 409, 'Tokens OAuth ilegíveis. Reconecte.');
 
   const now = deps.now();
-  if (connection.tokenExpiresAt !== null && connection.tokenExpiresAt - now > OAUTH_REFRESH_MARGIN_MS) {
+  if (options.rejectedAccessToken !== undefined && stored.accessToken !== options.rejectedAccessToken &&
+      connection.tokenExpiresAt !== null && connection.tokenExpiresAt - now > OAUTH_REFRESH_MARGIN_MS) {
+    return stored.accessToken;
+  }
+  if (options.rejectedAccessToken === undefined && connection.tokenExpiresAt !== null && connection.tokenExpiresAt - now > OAUTH_REFRESH_MARGIN_MS) {
     return stored.accessToken;
   }
   if (!stored.refreshToken) return endSession(deps, connection, new FreshserviceError('unauthorized', 'Sem refresh token.'));
@@ -653,6 +718,12 @@ export async function resolveOAuthAccessToken(deps: AuthDeps, connection: Connec
     );
   } catch (error) {
     return markTransient(deps, connection, error);
+  }
+  try {
+    assertTokenOwner(deps, connection);
+  } catch (error) {
+    await removeOldSecret(deps, secretRef);
+    throw error;
   }
   const finished = deps.now();
   saveConnection(

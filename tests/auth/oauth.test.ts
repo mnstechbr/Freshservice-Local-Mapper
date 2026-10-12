@@ -315,6 +315,116 @@ describe('OAuth: renovação de token e sessão expirada', () => {
     expect(h.calls).toHaveLength(0);
   });
 
+  it('401 antes do prazo local renova uma vez e valida o token novo; não precisa novo login', async () => {
+    h.setHandler((url, init) => {
+      if (url.pathname === TOKEN_PATH) return json({ access_token: SYNTHETIC.renewedAccessToken,
+        refresh_token: 'rt-synthetic', expires_in: 1800 });
+      return json({}, (init.headers as Record<string, string>).Authorization === `Bearer ${SYNTHETIC.renewedAccessToken}` ? 200 : 401);
+    });
+    expect(findConnection(h.db, 1)?.tokenExpiresAt).toBeGreaterThan(h.clock.now + 60_000);
+    expect((await testConnection(h.deps)).status).toBe('connected');
+    expect(h.calls.filter((call) => call.method === 'POST')).toHaveLength(1);
+    expect(h.calls.filter((call) => call.method === 'GET').map((call) => call.headers.Authorization))
+      .toEqual([`Bearer ${SYNTHETIC.accessToken}`, `Bearer ${SYNTHETIC.renewedAccessToken}`]);
+    const current = findConnection(h.db, 1)!;
+    expect(current.status).toBe('connected');
+    expect(h.vault.entries.get(current.secretRef!)).toContain('rt-synthetic');
+  });
+
+  it('dois testes concorrentes compartilham uma rotação de refresh e não apagam o token novo', async () => {
+    let releaseRefresh!: () => void;
+    const release = new Promise<void>((resolve) => { releaseRefresh = resolve; });
+    let refreshStarted!: () => void;
+    const started = new Promise<void>((resolve) => { refreshStarted = resolve; });
+    let oldProbes = 0;
+    let bothProbed!: () => void;
+    const probed = new Promise<void>((resolve) => { bothProbed = resolve; });
+    let refreshCalls = 0;
+    h.setHandler(async (url, init) => {
+      if (url.pathname === TOKEN_PATH) {
+        refreshCalls++;
+        refreshStarted();
+        await release;
+        return refreshCalls === 1 ? json({ access_token: SYNTHETIC.renewedAccessToken,
+          refresh_token: 'rt-synthetic', expires_in: 1800 }) : json({ error: 'invalid_grant' }, 400);
+      }
+      const auth = (init.headers as Record<string, string>).Authorization;
+      if (auth === `Bearer ${SYNTHETIC.accessToken}`) {
+        oldProbes++;
+        if (oldProbes === 2) bothProbed();
+        // As duas chamadas usam o token antigo antes de qualquer renovação.
+        await probed;
+        return json({}, 401);
+      }
+      return json({}, 200);
+    });
+    const outcomes = Promise.all([testConnection(h.deps), testConnection(h.deps)]);
+    await started;
+    // A barreira libera só depois das duas leituras com token antigo, sem sleeps ou relógio real.
+    releaseRefresh();
+    expect((await outcomes).map((result) => result.status)).toEqual(['connected', 'connected']);
+    expect(refreshCalls).toBe(1);
+    expect(findConnection(h.db, 1)?.status).toBe('connected');
+    const oldRow = { ...findConnection(h.db, 1)!, secretRef: 'referencia-antiga-removida' };
+    expect(await resolveOAuthAccessToken(h.deps, oldRow)).toBe(SYNTHETIC.renewedAccessToken);
+    expect(refreshCalls).toBe(1);
+  });
+
+  it('401 persistente depois de refresh não repete indefinidamente a leitura nem o token POST', async () => {
+    h.setHandler(freshworks({ validationStatus: 401 }));
+    expect((await testConnection(h.deps)).status).toBe('session_expired');
+    expect(h.calls.filter((call) => call.method === 'GET')).toHaveLength(2);
+    expect(h.calls.filter((call) => call.method === 'POST')).toHaveLength(1);
+  });
+
+  it.each([403, 429, 503])('verificação HTTP %s não força refresh nem repete GET', async (status) => {
+    h.setHandler(freshworks({ validationStatus: status }));
+    const before = findConnection(h.db, 1)?.secretRef;
+    expect((await testConnection(h.deps)).status).toBe(status === 403 ? 'no_permission' : 'connection_error');
+    expect(h.calls.map((call) => call.method)).toEqual(['GET']);
+    expect(findConnection(h.db, 1)?.secretRef).toBe(before);
+  });
+
+  it('erro de rede na verificação mantém tokens sem POST de refresh', async () => {
+    h.setHandler(() => { throw new TypeError('falha de rede sintética'); });
+    const before = findConnection(h.db, 1)?.secretRef;
+    expect((await testConnection(h.deps)).status).toBe('connection_error');
+    expect(h.calls.map((call) => call.method)).toEqual(['GET']);
+    expect(findConnection(h.db, 1)?.secretRef).toBe(before);
+  });
+
+  it('401 prematuro com refresh revogado encerra sessão sem repetir GET', async () => {
+    h.setHandler(freshworks({ validationStatus: 401, refreshStatus: 400 }));
+    expect((await testConnection(h.deps)).status).toBe('session_expired');
+    expect(h.calls.map((call) => call.method)).toEqual(['GET', 'POST']);
+    expect(findConnection(h.db, 1)).toMatchObject({ status: 'session_expired', secretRef: null });
+    expect(h.vault.entries.size).toBe(1);
+  });
+
+  it('desconectar durante refresh não reabre a sessão nem deixa o token recém-emitido no cofre', async () => {
+    let releaseRefresh!: () => void;
+    const release = new Promise<void>((resolve) => { releaseRefresh = resolve; });
+    let refreshStarted!: () => void;
+    const started = new Promise<void>((resolve) => { refreshStarted = resolve; });
+    h.setHandler(async (url) => {
+      if (url.pathname === TOKEN_PATH) {
+        refreshStarted();
+        await release;
+        return json({ access_token: SYNTHETIC.renewedAccessToken, refresh_token: 'rt-synthetic' });
+      }
+      return json({}, 401);
+    });
+    const testing = testConnection(h.deps);
+    const rejected = expect(testing).rejects.toMatchObject({ code: 'connection_not_ready' });
+    await started;
+    await disconnect(h.deps);
+    releaseRefresh();
+    await rejected;
+    expect(findConnection(h.db, 1)).toMatchObject({ status: 'disconnected', secretRef: null, tokenExpiresAt: null });
+    expect(h.vault.entries.size).toBe(1); // só configuração do perfil
+    expect(h.calls.filter((call) => call.method === 'POST')).toHaveLength(1);
+  });
+
   it('perto da expiração: renova com refresh_token, grava o novo token e remove o antigo', async () => {
     h.clock.now += 30 * 60 * 1000 - 10_000;
     const row = findConnection(h.db, 1);

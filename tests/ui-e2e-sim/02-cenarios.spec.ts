@@ -3,7 +3,7 @@
  * e perfil novos (nome único), então nenhum depende do anterior.
  * AVISO: NÃO é autenticação Freshworks nem Freshservice. Tudo é fictício (FSLM_SIMULATOR=1, TLD .invalid).
  */
-import type { APIRequestContext, Page } from '@playwright/test';
+import type { APIRequestContext, Page, Route } from '@playwright/test';
 import { collectErrors, expect, test } from '../ui-e2e/fixtures';
 import {
   ANALYST,
@@ -174,7 +174,36 @@ test('[SIMULADOR] só o access token expirou: o refresh renova e a conexão cont
   await esperarStatus(page, /Conectado/);
 
   await controle(request, { action: 'expire_access_tokens', user_email: ANALYST.email });
-  await testarConexao(page);
+  // Captura o corpo real da mesma requisição do clique antes de entregá-lo ao renderer.
+  // A leitura tardia de Response.json pode perder o lifecycle durante router.refresh.
+  const endpoint = `${SIM_ORIGIN}/api/connection/test`;
+  let resolveCaptured!: (value: { status: number; json: { status?: string } }) => void;
+  let rejectCaptured!: (error: unknown) => void;
+  const captured = new Promise<{ status: number; json: { status?: string } }>((resolve, reject) => {
+    resolveCaptured = resolve;
+    rejectCaptured = reject;
+  });
+  const handler = async (route: Route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    try {
+      const upstream = await route.fetch({ maxRetries: 0, maxRedirects: 0, timeout: 30_000 });
+      const bytes = await upstream.body();
+      const result = { status: upstream.status(), json: JSON.parse(bytes.toString('utf8')) as { status?: string } };
+      await route.fulfill({ response: upstream, body: bytes });
+      resolveCaptured(result);
+    } catch (error) {
+      rejectCaptured(error);
+      await route.abort();
+    }
+  };
+  await page.route(endpoint, handler);
+  try {
+    const [resultado] = await Promise.all([captured, testarConexao(page)]);
+    expect(resultado.status).toBe(200);
+    expect(resultado.json.status).toBe('connected');
+  } finally {
+    await page.unroute(endpoint, handler);
+  }
   await esperarStatus(page, /Conectado/);
 
   expect(errors).toEqual([]);

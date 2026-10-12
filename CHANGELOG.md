@@ -4,6 +4,7 @@
 
 Primeira beta pública do inventário local Read-Only. Preserva OAuth com perfis administrativos e a F4 (callback localhost, dashboard 127.0.0.1, state/cookie por host e passagem assinada de uso único).
 
+- Teste de conexão renova OAuth uma vez após 401 antecipado; chamadas concorrentes compartilham refresh, e desconexão em voo permanece desconectada.
 - Transporte bloqueia métodos de escrita em recursos antes de DNS/fetch.
 - Consentimento explícito também para escopos .edit; padrão apenas .view.
 - URL pode ser salva independentemente de OAuth/API key.

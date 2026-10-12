@@ -117,9 +117,13 @@ export async function testConnection(deps: AuthDeps): Promise<ConnectionResult> 
     );
   }
 
+  let usedOAuthToken: string | undefined;
   const authorization =
     connection.authMode === 'oauth'
-      ? async () => `Bearer ${await resolveOAuthAccessToken(deps, connection)}`
+      ? async () => {
+          usedOAuthToken = await resolveOAuthAccessToken(deps, connection);
+          return `Bearer ${usedOAuthToken}`;
+        }
       : async () => basicAuthorization(await resolveApiKey(deps, connection.secretRef));
 
   // OAuth: leitura compatível com os escopos concedidos (o padrão exige .manage). Sem candidato: insufficient_scope.
@@ -143,6 +147,13 @@ export async function testConnection(deps: AuthDeps): Promise<ConnectionResult> 
             connection.authMode,
             verification.path,
           );
+    // Um access token pode expirar antes do prazo local. No teste explícito, um 401 OAuth permite
+    // uma renovação e uma única verificação do token novo. API key e falhas transitórias não entram.
+    if (connection.authMode === 'oauth' && outcome.httpStatus === 401 && usedOAuthToken && verification) {
+      const token = await resolveOAuthAccessToken(deps, connection, { rejectedAccessToken: usedOAuthToken });
+      outcome = await probeInstance({ origin: instance.baseUrl, authorization: async () => `Bearer ${token}`,
+        timeoutMs: deps.timeoutMs, fetchImpl: deps.fetchImpl }, 'oauth', verification.path);
+    }
   } catch (error) {
     // Estados já gravados por resolveOAuthAccessToken: sessão encerrada ou falha transitória.
     if (error instanceof AuthError && error.code === 'session_expired') {
@@ -157,6 +168,10 @@ export async function testConnection(deps: AuthDeps): Promise<ConnectionResult> 
   }
 
   const now = deps.now();
+  const current = findConnection(deps.db, instance.id);
+  if (connection.authMode === 'oauth' && (!current || current.authMode !== 'oauth' || current.status === 'disconnected')) {
+    throw new AuthError('connection_not_ready', 409, 'A conexão mudou durante o teste OAuth.');
+  }
   const saved = saveConnection(
     deps.db,
     instance.id,

@@ -137,7 +137,8 @@ Restrição de marketplace: um relato da comunidade (mai/2024) diz que OAuth par
 - **Renovação antecipada.** O token é renovado 60 s antes do vencimento (`OAUTH_REFRESH_MARGIN_MS`), por `resolveOAuthAccessToken` (`src/lib/auth/oauth.ts`).
 - **Recusa do provedor no refresh** (`invalid_grant` ou 400/401): grava `session_expired` (401), **apaga os tokens locais** e pede nova conexão.
 - **Falha transitória** (rede, 5xx, 429, cofre indisponível): grava `connection_error` (503) e **mantém os tokens**. Nenhuma sessão é encerrada por erro transitório.
-- **Concorrência.** No motor de sincronização, uma única renovação por instância é compartilhada dentro do processo (`sharedFlight`, `src/lib/sync/token.ts`). Entre processos não há lock. O teste de conexão chama `resolveOAuthAccessToken` diretamente e não usa esse compartilhamento.
+- **Expiração antecipada no provedor.** Se o teste de conexão recebe 401 com OAuth, renova uma vez e verifica o token novo com um GET. Não repete refresh/GET indefinidamente; API key, 403 e falhas transitórias não forçam essa renovação.
+- **Concorrência.** O resolvedor OAuth compartilha a renovação dentro do processo, isolada por banco/conexão, tanto no teste de conexão quanto na sincronização. Relê a referência atual do cofre antes de renovar e recusa persistir tokens se a conexão mudou ou foi desconectada durante o refresh. Entre processos não há lock.
 - **Desconectar** (`POST /api/connection/disconnect`): apaga os segredos locais da conexão (tokens ou API key) e mantém o histórico da instância. O perfil de integração, com o client secret no cofre, é mantido para reconectar depois. **Não revoga a autorização no Freshworks**, porque a revogação não é documentada. Para revogar, remova o aplicativo no painel do Freshworks.
 - **Negação ou cancelamento** no retorno também apaga os tokens locais.
 
