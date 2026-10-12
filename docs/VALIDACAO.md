@@ -6,9 +6,9 @@ Atualizado em 2026-10-12. As evidências usam Fedora 44, Node 24.18.0, pnpm 10.3
 
 | Verificação | Resultado |
 |---|---|
-| Unitários finais | 72 arquivos, 871 passaram / 3 pesados pulados e executados à parte |
+| Unitários finais | 73 arquivos, 896 passaram / 3 pesados pulados e executados à parte |
 | Instalação real e idempotência Fedora (QA_HEAVY) | 13/13 cenários passaram em uma rodada integral, incluindo C4, C4b e C6 |
-| Autenticação e segurança | 23 arquivos, 316 testes passaram |
+| Autenticação e segurança | 24 arquivos, 341 testes passaram |
 | Read-Only, sync, módulos e sanitização | 15 arquivos, 137 testes passaram |
 | Typecheck | Passou |
 | Build de produção local | Passou nas execuções do simulador e produção local |
@@ -55,11 +55,11 @@ Unitários exercitam renomeação, item criado/removido, campos/formulários, ca
 
 Fedora: setup.sh --check passou, instalação com rede, migrations/backup, reinício/idempotência, SQLite e servidor local foram executados. XDG/permissões e indisponibilidade do cofre estão nos testes. Presença de secret-tool não comprova cofre Secret Service real funcionando.
 
-Windows: caminhos, DPAPI e executáveis absolutos foram exercitados com runners simulados. CI usa Windows Server 2025; seu resultado deve ser registrado no relatório. Nenhum resultado de Server equivale a Windows 11. Winget/UAC/DPAPI/keyring real exigem ambiente autorizado.
+O [CI final](https://github.com/mnstechbr/Freshservice-Local-Mapper/actions/runs/38238370583) passou no commit 7b7a68d. Fedora: bootstrap, 896 unitários/3 pesados pulados, typecheck e build. Windows Server 2025: bootstrap, DPAPI real com segredo fictício Unicode, 883 unitários/3 POSIX pulados, typecheck e build; cenários de bootstrap POSIX rodam em Fedora. Navegador Ubuntu: 25 produção, 15 simulador, 25 dev. Nenhum resultado de Server equivale a Windows 11. Winget/UAC, navegador/encerramento e ciclo completo do cofre/aplicativo em Windows 11 ainda exigem validação autorizada.
 
 ## 6. Publicação
 
-Remoto confirmado: https://github.com/mnstechbr/Freshservice-Local-Mapper. Titular confirmou a propriedade e autorizou publicação. Prompts, configuração privada, imagem de referência e relatórios internos ficam ignorados e preservados no computador. Scanner verifica índice e histórico por nome e conteúdo/magic; imagens precisam de revisão humana vinculada ao digest. Não publica bancos, backups, .env, credenciais nem traces.
+Remoto confirmado: https://github.com/mnstechbr/Freshservice-Local-Mapper. Titular confirmou a propriedade e autorizou publicação. Prompts, configuração privada, imagem de referência e relatórios internos ficam ignorados e preservados no computador. Scanner verifica índice e histórico por nome e conteúdo/magic; imagens precisam de revisão humana vinculada ao digest. Não publica bancos, backups, .env, credenciais nem traces. Branch main publicada sem forcepush; release v0.1.0-beta é prerelease. CI valida o commit de código; a atualização posterior é apenas documentação.
 
 ## 7. Pendências e riscos aceitos
 

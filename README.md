@@ -180,7 +180,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 Forneça a variável pelo ambiente do processo. Guarde a chave fora do projeto, em arquivo protegido ou gerenciador de segredos; não a coloque no `.env` do projeto nem em comandos gravados no histórico do shell. O Next herda essa variável: outros processos com acesso ao usuário continuam sendo um risco local. Guarde uma cópia separada, fora do projeto e do diretório de dados. Sem a chave, o arquivo do cofre fica ilegível. Não há rotação de chave nesta fase.
 
-Linux, macOS e Windows foram validados só com runner simulado; os backends reais não foram executados em sistema real.
+DPAPI passou em teste real de gravação, leitura Unicode e remoção no CI Windows Server 2025, com segredo fictício. Isso não homologa Windows 11. Secret Service e Keychain continuam sem validação real.
 
 ## 10. Primeiro inventário
 
@@ -270,7 +270,7 @@ curl -X POST -H 'Origin: http://127.0.0.1:3000' -H 'Content-Type: application/js
 - **Endpoints**: 23 módulos consultáveis têm caminho conferido no texto da documentação pública. O registro tem 26 entradas: 3 não suportadas. Workflows não têm GET documentado. Conversas e atividades de tickets ficam de fora por privacidade. Lista completa, chaves de resposta e escopos em `docs/ENDPOINTS.md`.
 - **Não documentados pelo Freshworks**: endpoint de renovação de token, revogação remota, redirecionamento com `127.0.0.1`, e a relação entre o domínio do Freshservice e a organização Freshworks. Ver `docs/AUTENTICACAO-UX-ANALISTA.md`, seção 3.
 - **Administração sem login**: as rotas `/api/admin/*` são protegidas pela guarda local de Host e Origin, que não autentica quem as usa (`docs/AUTH.md`, seção 2.2).
-- macOS (Keychain) e Windows (DPAPI) não foram executados em sistema real.
+- Keychain e Secret Service reais continuam pendentes; DPAPI tem smoke real em Windows Server 2025, sem homologação Windows 11.
 - Sem lock entre processos: não rode `pnpm dev` e `pnpm start` ao mesmo tempo no mesmo banco.
 
 ## 17. Solução de erros comuns

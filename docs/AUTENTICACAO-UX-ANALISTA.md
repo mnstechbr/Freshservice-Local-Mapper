@@ -178,7 +178,7 @@ Uma credencial por organização Freshworks. **Não está confirmado** se uma me
 
 Tudo abaixo foi validado contra o **simulador local**, com `FSLM_SIMULATOR=1`. **Nenhum desses cenários prova que o fluxo funciona com o Freshworks real.**
 
-**Comando:** `pnpm test:e2e:sim` (porta 3112). Resultado final F4: 14 de 14.
+**Comando:** `pnpm test:e2e:sim` (porta 3112). Resultado beta: 15 de 15, incluindo estabilização dos 23 módulos e consulta offline.
 
 - **Fluxo principal (15 passos).** A aba original atualiza sem recarregar. Testar conexão. Mapear tudo. Inventário. Upsert e remoção pelo controle do simulador, seguidos de nova sincronização. Página de diferenças. Desconexão. Nenhum segredo aparece em página, console ou JSON de perfis.
 - **Cenários (12):**
@@ -195,10 +195,10 @@ Tudo abaixo foi validado contra o **simulador local**, com `FSLM_SIMULATOR=1`. *
   11. Erro de rede: "Erro de conexão" mantém os tokens. Ao voltar, Conectado sem novo login.
   12. Callback 127.0.0.1: regressão de login e atualização automática para Conectado.
 
-**Testes automatizados de apoio** (`pnpm test`, 69 arquivos, 800 testes passando e 3 pulados), entre eles:
+**Testes automatizados de apoio** (`pnpm test`, 73 arquivos, 896 testes passando e 3 pesados pulados, executados separadamente), entre eles:
 
 - `tests/simulator/` (guardas, fluxo OAuth, API e layout da faixa);
-- `tests/auth/profiles.test.ts` (perfis, escopos e `.manage`);
+- `tests/auth/profiles.test.ts` (perfis, escopos e consentimento `.manage`/`.edit`);
 - `tests/sync/scope-gate.test.ts` (bloqueio por escopo no sync);
 - `tests/freshservice/official-scopes.test.ts` (mapa de escopos);
 - `tests/ui/auth-preflight.test.ts` e `tests/auth/oauth-preflight-url.test.ts` (pré-verificação);
@@ -228,6 +228,6 @@ Checklist. Nenhum item foi concluído. Qualquer chamada real exige aprovação e
 - [ ] **Revogação.** Confirmar se há API de revogação ou um procedimento no portal.
 - [ ] **`invalid_scope`.** Verificar o relato da comunidade com o escopo real do aplicativo.
 - [ ] **Validade.** Confirmar que o token de 30 min e o state de 10 min se comportam como documentado.
-- [ ] **Cofres.** Validar DPAPI (Windows), Keychain (macOS) e Secret Service com serviço real (Linux).
+- [ ] **Cofres.** DPAPI passou no CI Windows Server 2025; falta ciclo completo em Windows 11, Keychain e Secret Service reais.
 - [ ] **Backlog técnico.** Tratar o escopo `scopeKeyFor` do simulador para `tickets/{id}/*`, e a renovação entre processos (`docs/AUTH.md`, seção 16).
 - [ ] **Revisão.** Executar as revisões de código e de segurança com as ferramentas do projeto. Elas não foram executadas nesta etapa.

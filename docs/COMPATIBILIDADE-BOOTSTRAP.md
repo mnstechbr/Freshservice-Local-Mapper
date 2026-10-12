@@ -1,8 +1,8 @@
 # Compatibilidade Fedora/Windows 11 e bootstrap automático
 
-Data: 2026-10-11. Versão: 0.1.0.
+Atualização: 2026-10-12. Versão: 0.1.0-beta. Evidências históricas de 2026-10-11 nas seções 1–5; estado da beta na seção 6.
 
-Resumo: **Fedora Linux 44 validado de verdade**, na máquina de desenvolvimento e em contêiner Fedora limpo. **Windows 11 não foi executado**: o código para Windows está implementado e coberto por testes com plataforma simulada, a sintaxe do `setup.ps1` foi validada em PowerShell 7, e há um workflow de CI pronto para rodar em runner Windows. O workflow ainda não rodou, porque não houve push. Não declaramos compatibilidade efetiva com o Windows 11 até essa execução.
+Resumo: Fedora Linux 44 validado localmente e em CI com contêiner limpo. O CI executou bootstrap Windows Server 2025 e smoke DPAPI real com segredo fictício. **Windows 11 NÃO HOMOLOGADO**: nenhuma execução em Windows 11 foi feita; Server fornece evidência parcial. Resultados e link do CI constam no [relatório final](RELATORIO-FINAL-CODEX.md).
 
 ## 1. Implementações
 
@@ -98,11 +98,11 @@ Suítes no host Fedora, após as mudanças:
 | DPAPI (base64, `-EncodedCommand`) | SIMULADO (runner falso) | OK |
 | `setup.ps1`: parser e PSScriptAnalyzer (alvo 5.1) | PowerShell 7.4 em contêiner Linux | 0 erros de sintaxe e 0 incompatibilidades com 5.1 |
 | `setup.ps1`: lógica (winget e rede simulados) | SIMULADO | OK nos 7 cenários |
-| Execução real: bootstrap, winget, UAC, DPAPI, `taskkill`, navegador | **NÃO EXECUTADO** | Pendente: rodar `.github/workflows/ci.yml` (job `windows`) ou testar manualmente |
+| Execução real: bootstrap, winget, UAC, DPAPI, `taskkill`, navegador | **NÃO EXECUTADO** | Windows 11 pendente. CI Server já executou bootstrap/DPAPI real; não valida winget/UAC/navegador no cliente |
 
 ## 4. Limitações conhecidas
 
-- O Windows 11 não foi executado em máquina real nem em runner. O runner `windows-latest` do GitHub é Windows Server, não Windows 11.
+- O Windows 11 não foi executado em máquina real nem em runner. O runner `windows-2025` do CI é Windows Server, não Windows 11.
 - O DPAPI pode ficar indisponível sob Constrained Language Mode (WDAC/AppLocker). Nesse caso, use `FSLM_SECRET_KEY`.
 - A primeira instalação exige rede (registro npm). Instalação offline não é suportada.
 - `npm install` direto ainda grava `package-lock.json` e `node_modules` antes de falhar. Isso é limite do npm. O conflito é acusado, nunca silencioso.
@@ -127,9 +127,9 @@ Diagnóstico a qualquer momento: `http://127.0.0.1:3000/ambiente`.
 
 Resultados acima são históricos (antes da beta). Resultados finais da árvore estabilizada em [VALIDACAO.md](VALIDACAO.md) e [RELATORIO-FINAL-CODEX.md](RELATORIO-FINAL-CODEX.md). O remoto público foi confirmado com o titular; prompts internos, configurações privadas e referência de imagem ficam fora da distribuição.
 
-O CI usa Windows Server 2025, Fedora 44 e Ubuntu 24.04 para o navegador. Windows Server fornece evidência parcial; **Windows 11 continua NÃO HOMOLOGADO**. Os cenários de bootstrap POSIX são executados em Fedora e não no job Windows. DPAPI, winget, UAC, encerramento e navegador devem ser verificados em Windows 11 real.
+O [CI final](https://github.com/mnstechbr/Freshservice-Local-Mapper/actions/runs/38238370583) passou nos três jobs: Windows Server 2025, Fedora 44 e Ubuntu 24.04 para o navegador. Bootstrap, unitários, typecheck e build passaram em Fedora/Server; DPAPI real passou no Server; os 65 E2E passaram em Ubuntu. Windows Server fornece evidência parcial; **Windows 11 continua NÃO HOMOLOGADO**. Os cenários de bootstrap POSIX são executados em Fedora e não no job Windows. DPAPI, winget, UAC, encerramento e navegador devem ser verificados em Windows 11 real.
 
-Executáveis Windows (PowerShell, rundll32, taskkill e url.dll) agora usam SystemRoot\System32, com recusa de raiz inválida e sem fallback para PATH. A validação local dessa mudança usa runners simulados; não prova resistência a um administrador que altere o sistema operacional.
+Executáveis Windows (PowerShell, rundll32, taskkill e url.dll) agora usam SystemRoot\System32, com recusa de raiz inválida e sem fallback para PATH. A validação local usa runners simulados; o CI Windows Server acrescenta smoke DPAPI real. Não prova resistência a um administrador que altere o sistema operacional.
 
 `FSLM_SECRET_KEY` deve vir do ambiente e ser guardada fora do projeto, em local protegido. Ela é herdada pelo Next. O cofre do sistema é preferível quando disponível; cofres reais ainda exigem validação autorizada.
 

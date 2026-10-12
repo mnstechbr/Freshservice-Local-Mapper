@@ -10,7 +10,7 @@ pnpm exec playwright install chromium
 pnpm test:e2e:sim
 ```
 
-O Playwright inicia build local em 127.0.0.1:3112, liga FSLM_SIMULATOR explicitamente e cria um SQLite novo em `.e2e-data/`. O navegador só aceita loopback; hosts fictícios *.simulador.invalid são atendidos em processo, sem DNS/socket externo. Não usa o banco padrão do usuário. A produção local/testes dev desligam explicitamente a flag e verificam ausência da faixa de simulação.
+O Playwright inicia build local em 127.0.0.1:3112, liga FSLM_SIMULATOR explicitamente e cria um SQLite novo em `.e2e-data/`. O navegador só aceita loopback; hosts fictícios *.simulador.invalid são atendidos em processo, sem DNS/socket externo. Não usa o banco padrão do usuário. Cada rodada automatizada gera chave AES-GCM efêmera para o cofre cifrado e isola o D-Bus; não depende do cofre/chave da sessão local. A produção local/testes dev desligam explicitamente a flag e verificam ausência da faixa de simulação.
 
 `01-fluxo-principal.spec.ts` reproduz URL sem perfil → configuração administrativa → Conectar → login → callback localhost → dashboard 127.0.0.1 Conectado sem recarga → Testar conexão → coleta → alteração/remoção → segunda coleta → diferenças → desconectar. O cookie de state existe somente no host do callback, é removido e não é compartilhado com o dashboard.
 
@@ -20,13 +20,14 @@ O Playwright inicia build local em 127.0.0.1:3112, liga FSLM_SIMULATOR explicita
 
 ## Apresentação no navegador
 
-Use um diretório novo e exclusivo sob `.e2e-data/` (nunca o banco do usuário):
+Use um diretório novo e exclusivo sob `.e2e-data/` (nunca o banco do usuário). Configure um cofre seguro; para esta demonstração fictícia, pode gerar chave temporária pelo ambiente, sem imprimir ou publicar seu valor:
 
 ```bash
+export FSLM_SECRET_KEY="$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))")"
 FSLM_DATA_DIR="$PWD/.e2e-data/apresentacao" FSLM_SIMULATOR=1 PORT=3112 FSLM_NO_BROWSER=1 pnpm dev
 ```
 
-No PowerShell, defina essas variáveis no ambiente da sessão usando caminho absoluto para FSLM_DATA_DIR. Abra http://127.0.0.1:3112. Todas as páginas mostram **Simulador local — dados fictícios**.
+No PowerShell, gere a chave com `$env:FSLM_SECRET_KEY = node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))"` e defina as demais variáveis no ambiente da sessão usando caminho absoluto para FSLM_DATA_DIR. A chave temporária serve apenas aos segredos fictícios desta apresentação; não a use em banco real nem a publique. Abra http://127.0.0.1:3112. Todas as páginas mostram **Simulador local — dados fictícios**.
 
 Em Configurações → Administração da integração crie o perfil fictício: nome livre, organização `https://demo.myfreshworks.simulador.invalid`, client ID `sim-client-fslm`, secret `sim-secret-ficticio-fslm`, domínio `demo.freshservice.simulador.invalid`, callback localhost. Mantenha .view por padrão; agentes/grupos/catálogo/formulário podem ficar bloqueados por escopo ou papel, de propósito.
 

@@ -18,7 +18,7 @@ O endereço do remoto foi fornecido pelo titular após conferir a configuração
 | A-04 transporte Read-Only | Corrigido e validado | Guarda runtime anterior a DNS/fetch, métodos inválidos e mutação durante DNS recusados. POST exclusivamente token Freshworks exato. |
 | A-05 minimização | Aceito com justificativa após correção parcial validada | ITSM somente metadados por padrão; assinatura/background_information omitidos em pessoas nesse modo. Nomes, assuntos e custom_fields conservados para inventário/diff. Não houve allowlist ampla que descartasse campos essenciais; texto livre/novos campos permanecem riscos. |
 | A-06 SQLite/backups sem cifra | Aceito com justificativa | Não migrar/reescrever banco automaticamente; permissões locais e recomendação LUKS/BitLocker. Segredos ficam no cofre separado. |
-| A-07 executáveis Windows | Corrigido e validado em simulação | PowerShell/rundll32/taskkill/url.dll em SystemRoot\System32; raiz inválida recusada. Não validado em Windows 11 real. |
+| A-07 executáveis Windows | Corrigido e validado; Server parcial | PowerShell/rundll32/taskkill/url.dll em SystemRoot\System32; raiz inválida recusada. Bootstrap e DPAPI passaram no CI Windows Server 2025; Windows 11 não homologado. |
 | A-08 chave do cofre | Corrigido e validado | Hints/testes/guias orientam ambiente e cópia externa protegida; chave não vai no .env do projeto. Next herda ambiente (risco documentado). |
 | A-09 detalhes entre instâncias | Corrigido e validado | Queries exigem instância ativa, detalhes/relações/matches delimitados; outra instância/null vira 404. Testes preservam versões ao trocar seleção. |
 | A-10 material privado | Corrigido e validado | Prompts/.claude/relatórios internos/referência ignorados; auditoria do índice e histórico por bytes, nomes e padrões, mais revisão humana das imagens. |
@@ -48,16 +48,17 @@ Motor de diferenças: unitários confirmam renomeação, criação/remoção, ca
 
 ## Validações
 
-- Unitários finais:72 arquivos,871 aprovados/3 pesados pulados. A rodada QA_HEAVY integral passou 13/13, incluindo os 3 pulados na suíte normal; total 874 casos únicos exercitados.
-- Autenticação/segurança:23 arquivos,316/316.
+- Unitários finais:73 arquivos,896 aprovados/3 pesados pulados. A rodada QA_HEAVY integral passou 13/13, incluindo os 3 pulados na suíte normal; total 899 casos únicos exercitados.
+- Autenticação/segurança:24 arquivos,341/341.
 - Read-Only/sync/módulos/sanitização:15 arquivos,137/137.
 - Publicação:21 testes específicos dentro dos unitários finais.
 - Typecheck passou. Build final de produção passou, além dos builds nos E2E.
 - E2E simulador:15/15; reinício offline:1/1,175 versões preservadas.
 - Produção local: 25/25 passaram. Desenvolvimento: 25/25 passaram.
+- [CI final aprovado](https://github.com/mnstechbr/Freshservice-Local-Mapper/actions/runs/38238370583) no commit 7b7a68d: Fedora 896/3 pulados; Windows Server 883/3 POSIX pulados (arquivo de cenários POSIX excluído); bootstrap, typecheck e build nos dois. DPAPI real gravou/leu Unicode/removeu segredo fictício. Navegador Ubuntu: 25 produção, 15 simulador e 25 dev.
 - setup.sh --check passou; instalação limpa com pnpm atualizado, SQLite/migrations/backup, idempotência, detecção de processo e início/encerramento cobertos em Fedora.
 
-Falhas intermediárias resolvidas: EPERM na captura de subprocessos dentro do sandbox (repetição permitida passou), expectativa antiga pnpm 10.18 no teste C4 (atualizada), asserção que confundia preflight GET com iniciar OAuth (agora bloqueia launch/start/callback), comentário ts-expect-error sem erro correspondente (removido). Um teste dev também usava Origin da porta de produção (3110 em vez de 3111); passou usando a origem real da página, mantendo CSRF. Nenhuma proteção foi relaxada para passar.
+Falhas intermediárias resolvidas: EPERM na captura de subprocessos dentro do sandbox (repetição permitida passou), expectativa antiga pnpm 10.18 no teste C4 (atualizada), asserção que confundia preflight GET com iniciar OAuth (agora bloqueia launch/start/callback), comentário ts-expect-error sem erro correspondente (removido). Um teste dev também usava Origin da porta de produção (3110 em vez de 3111); passou usando a origem real da página, mantendo CSRF. No CI, root no contêiner causava semântica de permissões inadequada e ownership Git; corrigido rodando bootstrap/testes como usuário sem privilégios dono do checkout. E2E agora gera chave AES-GCM efêmera e isola D-Bus, em vez de herdar a chave local. DPAPI falhou em SecureString; import explícito do módulo Security do PowerShell do sistema resolveu o runner real, evitando a busca herdada por PSModulePath. Entrada usa $input/Text/base64, erros são marcadores fechados e os limites/cifra foram preservados. A incompatibilidade de herança é descrita pela [Microsoft](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_psmodulepath?view=powershell-7.6). Verificador offline passou após esperar a renderização via asserções Playwright. Nenhuma proteção foi relaxada para passar.
 
 Auditoria do registro: 0 vulnerabilidades de produção; 1 moderada em esbuild 0.18.20 transitivo de drizzle-kit (desenvolvimento). Não executamos studio exposto; override transitivo sem validar compatibilidade foi evitado. pnpm atualizado pelo [advisory oficial GHSA-54hh-g5mx-jqcp](https://github.com/pnpm/pnpm/security/advisories/GHSA-54hh-g5mx-jqcp). Há avisos não fatais de tracing process.cwd no Next e carregamento de config Vitest; não impedem teste/build.
 
@@ -67,12 +68,12 @@ Rodada local do E2E 04, Fedora 44/Node 24.18: diagnóstico 597 ms; primeiro mape
 
 ## Plataformas e riscos restantes
 
-Fedora validado localmente como acima. Secret Service instalado, mas teste real de chaveiro desbloqueado/bloqueado não foi feito. Windows 11 não disponível; runner Windows Server é evidência parcial. DPAPI, winget/UAC, encerramento/navegador e cofres reais precisam de validação manual autorizada. macOS não é sistema-alvo.
+Fedora validado localmente como acima. Secret Service instalado, mas teste real de chaveiro desbloqueado/bloqueado não foi feito. Windows 11 não disponível; runner Windows Server é evidência parcial. DPAPI passou em smoke real no Server; winget/UAC, encerramento/navegador e ciclo completo do aplicativo/cofre ainda precisam de validação manual em Windows 11. Secret Service/Keychain reais continuam pendentes. macOS não é sistema-alvo.
 
 SQLite/backups não cifrados e históricos antigos não limpos. Primeira coleta com nova sanitização pode produzir diff mostrando contato anterior. Campos por nome não detectam PII em texto livre. Rotas administrativas sem identidade local, HTTPloopback cookie sem Secure, CSP unsafe-inline e DNSrebinding residual ficam documentados em AUTH/VALIDACAO. Sem lock de refresh entre processos; não rodar dois servidores no mesmo banco. Domínios customizados não suportados. Nenhum teste real/corporativo foi feito.
 
 ## Publicação
 
-Branch main, versão 0.1.0-beta. Validações locais obrigatórias e auditoria do índice passaram; primeira publicação autorizada preparada. CI Windows Server/Fedora/navegador executará após o push; seu resultado será registrado sem equivaler a homologação real. Sem forcepush nem sobrescrita de histórico. Imagens distribuídas são capturas sintéticas de demonstração, revisadas visualmente por digest. Nenhum banco/backup/log/trace/.env real publicado.
+Branch main, versão 0.1.0-beta. Código publicado no repositório existente após validações locais e auditoria do índice/histórico. Commits: d942067 (estabilização), a395769 (isolamento CI), cddeda7 (erros DPAPI redigidos), ef61c3b (entrada PowerShell), 7b7a68d (módulo Security/espera offline). O [CI final](https://github.com/mnstechbr/Freshservice-Local-Mapper/actions/runs/38238370583) passou nesse último commit; atualização documental posterior não modifica runtime. Release v0.1.0-beta é prerelease, com limitações explícitas e sem assets de dados locais. Sem forcepush nem sobrescrita de histórico. Imagens distribuídas são capturas sintéticas de demonstração, revisadas visualmente por digest. Nenhum banco/backup/log/trace/.env real publicado.
 
 [Guia de demonstração integral](DEMONSTRACAO-SIMULADOR.md) reproduz duas coletas e reinício offline. A experiência do analista está pronta para demonstração com simulador. Uso contra serviço real permanece não homologado.

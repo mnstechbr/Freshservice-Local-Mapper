@@ -267,7 +267,7 @@ A chave de API, o client secret e os tokens OAuth **nunca são gravados em texto
 | Sistema | Cofre usado |
 |---|---|
 | Fedora | Chaveiro do sistema (GNOME Keyring ou KWallet), via `secret-tool`. O chaveiro precisa estar desbloqueado |
-| Windows 11 | DPAPI do Windows. Só o seu usuário do Windows consegue decifrar (não testado em Windows real) |
+| Windows 11 | DPAPI do Windows. Só o seu usuário do Windows consegue decifrar (smoke real no Windows Server; Windows 11 não homologado) |
 | Qualquer sistema (alternativa) | Arquivo cifrado com AES-256-GCM, que só funciona se você definir a variável `FSLM_SECRET_KEY` |
 
 Se nenhum cofre estiver disponível, a ferramenta **não guarda** a credencial e mostra o motivo.
@@ -364,7 +364,7 @@ O script usa o `winget` (gerenciador oficial da Microsoft) para instalar o Node.
 
 **Limitações conhecidas:**
 
-- O Windows 11 ainda não foi executado de verdade. Instalação, cofre DPAPI e encerramento do servidor foram testados só por simulação.
+- O Windows 11 ainda não foi executado de verdade. Bootstrap e DPAPI passaram no CI Windows Server 2025; winget/UAC e navegador/encerramento em Windows 11 continuam pendentes.
 - No Windows, se o PowerShell estiver em modo restrito por política da empresa (AppLocker/WDAC), o cofre DPAPI pode não funcionar. Nesse caso, use `FSLM_SECRET_KEY`.
 - Fedora anterior ao 44 não foi testado.
 - No Fedora sem sessão gráfica ou com chaveiro bloqueado, o cofre do sistema fica indisponível. Use `FSLM_SECRET_KEY` (seção 6.3).

@@ -187,7 +187,7 @@ Ordem de escolha (`src/lib/secrets/vault.ts`):
 - **Sem cofre disponível.** Nada é gravado. A mensagem diz "Nenhum cofre seguro disponível: configure cofre seguro (Secret Service desbloqueado ou FSLM_SECRET_KEY)" e lista o motivo de cada backend.
 - `connections.secret_ref` e `integration_profiles.client_secret_ref` guardam só a referência. Nunca o segredo.
 - Gerar a chave do fallback: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Guardá-la fora do projeto. Perdê-la torna o arquivo do cofre ilegível. Não há rotação de chave.
-- Linux, macOS e Windows foram testados só com runner simulado. Não foram executados em sistema real.
+- DPAPI passou em smoke real no CI Windows Server 2025, com segredo fictício Unicode e exclusão da referência criada. Windows 11, Secret Service e Keychain reais permanecem pendentes.
 
 ## 11. Estados da conexão
 
@@ -287,7 +287,7 @@ Hooks mínimos no código de produção, todos condicionados à flag ou a hosts 
 13. **Simulador.** `scopeKeyFor` em `src/lib/simulator/fixtures.ts` remove IDs numéricos. Por isso o escopo de `tickets/{id}/*` não é aplicado no simulador.
 14. **Renovação entre processos.** Sem lock. A renovação compartilhada vale só dentro do processo (seção 6).
 15. **Pop-up do navegador.** Sem pré-verificação em cache, a aba é aberta depois da checagem, e o navegador pode bloqueá-la. Nesse caso, a interface oferece o link "use este link".
-16. **Cofres.** Windows (DPAPI) e macOS (Keychain) não foram executados em sistema real. Linux foi exercitado só com `secret-tool` falso.
+16. **Cofres.** DPAPI passou em smoke real no Windows Server 2025; isso não homologa Windows 11. Keychain e Secret Service reais continuam sem validação; Linux foi exercitado com `secret-tool` falso.
 17. **Cookie de state sem `Secure`** e CSP com `'unsafe-inline'` (seção 17).
 
 ## 17. Decisões de segurança
